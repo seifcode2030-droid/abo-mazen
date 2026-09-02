@@ -38,17 +38,11 @@ const toastContainer = document.getElementById("toastContainer");
 // ======================================================
 
 let isTranslating = false;
+let isListening = false;
+let recognition = null;
 
 const MAX_HISTORY = 20;
 const STORAGE_KEY = "translation_history";
-
-
-// ======================================================
-// حالة الميكروفون
-// ======================================================
-
-let recognition = null;
-let isListening = false;
 
 
 // ======================================================
@@ -79,7 +73,7 @@ function getLangLabel(code) {
 
 
 // ======================================================
-// تحويل أكواد اللغات
+// تحويل أكواد اللغات إلى TranslateAPI
 // ======================================================
 
 function convertLanguageCode(code) {
@@ -131,10 +125,10 @@ function showToast(message, type = "success") {
     toast.innerHTML =
         '<span class="toast-icon">' +
         (icons[type] || "📢") +
-        '</span>' +
-        '<span>' +
+        "</span>" +
+        "<span>" +
         escapeHtml(String(message)) +
-        '</span>';
+        "</span>";
 
     toastContainer.appendChild(toast);
 
@@ -158,11 +152,11 @@ function showToast(message, type = "success") {
 function updateCharCount() {
 
     if (sourceText && charCountSpan) {
+
         charCountSpan.textContent =
             sourceText.value.length;
     }
 }
-
 
 if (sourceText) {
 
@@ -170,7 +164,6 @@ if (sourceText) {
         "input",
         updateCharCount
     );
-
 }
 
 
@@ -180,29 +173,35 @@ if (sourceText) {
 
 if (swapBtn) {
 
-    swapBtn.addEventListener("click", function() {
+    swapBtn.addEventListener(
+        "click",
+        function() {
 
-        const src = sourceLangEl.value;
-        const tgt = targetLangEl.value;
+            const src = sourceLangEl.value;
+            const tgt = targetLangEl.value;
 
-        sourceLangEl.value = tgt;
-        targetLangEl.value = src;
+            sourceLangEl.value = tgt;
+            targetLangEl.value = src;
 
-        const srcText = sourceText.value;
-        const tgtText = targetText.value;
+            const oldSourceText = sourceText.value;
+            const oldTargetText = targetText.value;
 
-        sourceText.value = tgtText;
-        targetText.value = srcText;
+            sourceText.value = oldTargetText;
+            targetText.value = oldSourceText;
 
-        updateCharCount();
+            updateCharCount();
 
-        showToast(
-            "تم تبديل اللغات",
-            "success"
-        );
+            // تحديث لغة التعرف الصوتي إذا كان موجودًا
+            if (recognition) {
+                recognition.lang = getSpeechLanguage();
+            }
 
-    });
-
+            showToast(
+                "تم تبديل اللغات",
+                "success"
+            );
+        }
+    );
 }
 
 
@@ -212,15 +211,16 @@ if (swapBtn) {
 
 if (clearBtn) {
 
-    clearBtn.addEventListener("click", function() {
+    clearBtn.addEventListener(
+        "click",
+        function() {
 
-        sourceText.value = "";
-        targetText.value = "";
+            sourceText.value = "";
+            targetText.value = "";
 
-        updateCharCount();
-
-    });
-
+            updateCharCount();
+        }
+    );
 }
 
 
@@ -259,7 +259,6 @@ if (copyBtn) {
 
                     targetText.select();
                     document.execCommand("copy");
-
                 }
 
                 showToast(
@@ -285,19 +284,15 @@ if (copyBtn) {
                         "تعذر نسخ الترجمة",
                         "error"
                     );
-
                 }
-
             }
-
         }
     );
-
 }
 
 
 // ======================================================
-// الترجمة باستخدام TranslateAPI
+// TranslateAPI
 // ======================================================
 
 async function translateText(
@@ -310,25 +305,20 @@ async function translateText(
         throw new Error("النص فارغ");
     }
 
-
     if (!TRANSLATE_API_KEY ||
-        TRANSLATE_API_KEY === "" ||
         TRANSLATE_API_KEY === "ta_ضع_مفتاحك_هنا"
     ) {
 
         throw new Error(
             "مفتاح TranslateAPI غير موجود"
         );
-
     }
-
 
     const source =
         convertLanguageCode(sourceLang);
 
     const target =
         convertLanguageCode(targetLang);
-
 
     console.log(
         "TranslateAPI source:",
@@ -340,11 +330,9 @@ async function translateText(
         target
     );
 
-
     if (source === target) {
         return text.trim();
     }
-
 
     let response;
 
@@ -355,8 +343,7 @@ async function translateText(
                 method: "POST",
 
                 headers: {
-                    "Authorization": "Bearer " +
-                        TRANSLATE_API_KEY,
+                    "Authorization": "Bearer " + TRANSLATE_API_KEY,
 
                     "Content-Type": "application/json",
 
@@ -364,13 +351,9 @@ async function translateText(
                 },
 
                 body: JSON.stringify({
-
                     text: text.trim(),
-
                     source_language: source,
-
                     target_language: target
-
                 })
             }
         );
@@ -385,9 +368,7 @@ async function translateText(
         throw new Error(
             "تعذر الاتصال بخدمة الترجمة"
         );
-
     }
-
 
     let data;
 
@@ -405,9 +386,7 @@ async function translateText(
         throw new Error(
             "استجابة API غير صالحة"
         );
-
     }
-
 
     console.log(
         "TranslateAPI status:",
@@ -419,7 +398,6 @@ async function translateText(
         data
     );
 
-
     if (!response.ok) {
 
         if (response.status === 401) {
@@ -427,31 +405,24 @@ async function translateText(
             throw new Error(
                 "مفتاح TranslateAPI غير صالح"
             );
-
         }
-
 
         if (response.status === 403) {
 
             throw new Error(
                 "ليس لديك صلاحية لاستخدام TranslateAPI"
             );
-
         }
-
 
         if (response.status === 429) {
 
             throw new Error(
                 "تم تجاوز حد الطلبات، حاول بعد قليل"
             );
-
         }
-
 
         let errorMessage =
             "HTTP " + response.status;
-
 
         if (data) {
 
@@ -459,32 +430,28 @@ async function translateText(
                 typeof data.detail === "string"
             ) {
 
-                errorMessage =
-                    data.detail;
+                errorMessage = data.detail;
 
             } else if (
                 typeof data.error === "string"
             ) {
 
-                errorMessage =
-                    data.error;
+                errorMessage = data.error;
 
             } else if (
                 typeof data.message === "string"
             ) {
 
-                errorMessage =
-                    data.message;
-
+                errorMessage = data.message;
             }
-
         }
 
-
         throw new Error(errorMessage);
-
     }
 
+    // ----------------------------------------------
+    // استخراج الترجمة
+    // ----------------------------------------------
 
     if (
         data &&
@@ -492,9 +459,7 @@ async function translateText(
     ) {
 
         return data.translated_text.trim();
-
     }
-
 
     if (
         data &&
@@ -503,9 +468,7 @@ async function translateText(
     ) {
 
         return data.data.translated_text.trim();
-
     }
-
 
     if (
         data &&
@@ -513,9 +476,7 @@ async function translateText(
     ) {
 
         return data.translation.trim();
-
     }
-
 
     if (
         data &&
@@ -526,21 +487,16 @@ async function translateText(
         const translations =
             data.translations;
 
-
         if (
             typeof translations[target] === "string"
         ) {
 
             return translations[target].trim();
-
         }
 
-
-        const values =
-            Object.values(translations);
-
-
-        for (const value of values) {
+        for (
+            const value of Object.values(translations)
+        ) {
 
             if (
                 typeof value === "string" &&
@@ -548,24 +504,18 @@ async function translateText(
             ) {
 
                 return value.trim();
-
             }
-
         }
-
     }
-
 
     console.error(
         "لم يتم العثور على الترجمة:",
         data
     );
 
-
     throw new Error(
         "لم يتم العثور على الترجمة في استجابة API"
     );
-
 }
 
 
@@ -575,9 +525,12 @@ async function translateText(
 
 async function performTranslation() {
 
+    if (!sourceText || !targetText) {
+        return;
+    }
+
     const text =
         sourceText.value.trim();
-
 
     if (!text) {
 
@@ -587,43 +540,36 @@ async function performTranslation() {
         );
 
         return;
-
     }
-
 
     if (isTranslating) {
         return;
     }
 
-
     isTranslating = true;
 
-    translateBtn.disabled = true;
-
+    if (translateBtn) {
+        translateBtn.disabled = true;
+    }
 
     if (translateTextSpan) {
 
         translateTextSpan.textContent =
             "جاري الترجمة...";
-
     }
-
 
     if (loadingIndicator) {
 
         loadingIndicator.classList.remove(
             "hidden"
         );
-
     }
-
 
     const srcLang =
         sourceLangEl.value;
 
     const tgtLang =
         targetLangEl.value;
-
 
     try {
 
@@ -634,10 +580,8 @@ async function performTranslation() {
                 tgtLang
             );
 
-
         targetText.value =
             translation;
-
 
         saveToHistory(
             text,
@@ -646,15 +590,12 @@ async function performTranslation() {
             tgtLang
         );
 
-
         renderHistory();
-
 
         showToast(
             "تمت الترجمة بنجاح",
             "success"
         );
-
 
     } catch (error) {
 
@@ -663,24 +604,9 @@ async function performTranslation() {
             error
         );
 
-
-        let msg =
-            error.message ||
-            "حدث خطأ أثناء الترجمة";
-
-
-        if (
-            error.message === "النص فارغ"
-        ) {
-
-            msg =
-                "النص فارغ، يرجى إدخال نص";
-
-        }
-
-
         showToast(
-            msg,
+            error.message ||
+            "حدث خطأ أثناء الترجمة",
             "error"
         );
 
@@ -688,27 +614,23 @@ async function performTranslation() {
 
         isTranslating = false;
 
-        translateBtn.disabled = false;
-
+        if (translateBtn) {
+            translateBtn.disabled = false;
+        }
 
         if (translateTextSpan) {
 
             translateTextSpan.textContent =
                 "ترجمة";
-
         }
-
 
         if (loadingIndicator) {
 
             loadingIndicator.classList.add(
                 "hidden"
             );
-
         }
-
     }
-
 }
 
 
@@ -722,19 +644,17 @@ if (translateBtn) {
         "click",
         performTranslation
     );
-
 }
 
 
 // ======================================================
-// الميكروفون
+// MIC - لغة التعرف الصوتي
 // ======================================================
 
 function getSpeechLanguage() {
 
     const lang =
         sourceLangEl.value;
-
 
     if (
         lang === "arb_Arab" ||
@@ -744,18 +664,116 @@ function getSpeechLanguage() {
     ) {
 
         return "ar-SA";
-
     }
 
-
-    // Wolof
     return "wo-SN";
-
 }
 
 
 // ======================================================
-// إنشاء نظام التعرف على الكلام
+// MIC - البحث عن الزر
+// ======================================================
+
+function findMicrophoneButton() {
+
+    const ids = [
+        "micBtn",
+        "microphoneBtn",
+        "micButton",
+        "voiceBtn",
+        "recordBtn",
+        "startMicBtn"
+    ];
+
+    for (const id of ids) {
+
+        const button =
+            document.getElementById(id);
+
+        if (button) {
+            return button;
+        }
+    }
+
+    return null;
+}
+
+
+let micButton =
+    findMicrophoneButton();
+
+
+// ======================================================
+// MIC - إنشاء الزر إذا لم يكن موجودًا
+// ======================================================
+
+if (!micButton && sourceText) {
+
+    micButton =
+        document.createElement("button");
+
+    micButton.id =
+        "micBtn";
+
+    micButton.type =
+        "button";
+
+    micButton.textContent =
+        "🎤";
+
+    micButton.title =
+        "التحدث بالميكروفون";
+
+    micButton.setAttribute(
+        "aria-label",
+        "التحدث بالميكروفون"
+    );
+
+    sourceText.parentElement.appendChild(
+        micButton
+    );
+}
+
+
+// ======================================================
+// MIC - تحديث شكل الزر
+// ======================================================
+
+function updateMicrophoneUI(active) {
+
+    if (!micButton) {
+        return;
+    }
+
+    if (active) {
+
+        micButton.textContent =
+            "⏹️";
+
+        micButton.title =
+            "إيقاف التسجيل";
+
+        micButton.classList.add(
+            "recording"
+        );
+
+    } else {
+
+        micButton.textContent =
+            "🎤";
+
+        micButton.title =
+            "التحدث بالميكروفون";
+
+        micButton.classList.remove(
+            "recording"
+        );
+    }
+}
+
+
+// ======================================================
+// MIC - إنشاء SpeechRecognition
 // ======================================================
 
 function setupSpeechRecognition() {
@@ -764,28 +782,26 @@ function setupSpeechRecognition() {
         window.SpeechRecognition ||
         window.webkitSpeechRecognition;
 
-
     if (!SpeechRecognition) {
 
         console.warn(
-            "Speech Recognition غير مدعوم في هذا المتصفح"
+            "SpeechRecognition غير مدعوم"
         );
 
         return null;
-
     }
-
 
     const rec =
         new SpeechRecognition();
 
-
     rec.continuous = false;
-
     rec.interimResults = true;
-
     rec.maxAlternatives = 1;
 
+
+    // ----------------------------------------------
+    // بدء التسجيل
+    // ----------------------------------------------
 
     rec.onstart = function() {
 
@@ -797,15 +813,17 @@ function setupSpeechRecognition() {
             "🎤 تحدث الآن...",
             "success"
         );
-
     };
 
+
+    // ----------------------------------------------
+    // استقبال الكلام
+    // ----------------------------------------------
 
     rec.onresult = function(event) {
 
         let finalText = "";
         let interimText = "";
-
 
         for (
             let i = event.resultIndex; i < event.results.length; i++
@@ -814,7 +832,6 @@ function setupSpeechRecognition() {
             const transcript =
                 event.results[i][0].transcript;
 
-
             if (event.results[i].isFinal) {
 
                 finalText += transcript;
@@ -822,89 +839,111 @@ function setupSpeechRecognition() {
             } else {
 
                 interimText += transcript;
-
             }
-
         }
 
-
-        if (finalText) {
+        if (finalText.trim()) {
 
             sourceText.value =
                 finalText.trim();
 
             updateCharCount();
 
-            // الترجمة تلقائيًا بعد الكلام
-            setTimeout(function() {
+            setTimeout(
+                function() {
+                    performTranslation();
+                },
+                300
+            );
 
-                performTranslation();
-
-            }, 300);
-
-        } else if (interimText) {
+        } else if (interimText.trim()) {
 
             sourceText.value =
-                interimText;
+                interimText.trim();
 
             updateCharCount();
-
         }
-
     };
 
+
+    // ----------------------------------------------
+    // خطأ
+    // ----------------------------------------------
 
     rec.onerror = function(event) {
 
         console.error(
-            "Speech Recognition Error:",
+            "SpeechRecognition Error:",
             event.error
         );
-
 
         isListening = false;
 
         updateMicrophoneUI(false);
 
-
         if (event.error === "not-allowed") {
 
             showToast(
-                "اسمح للمتصفح باستخدام الميكروفون",
+                "❌ الميكروفون غير مسموح للمتصفح",
                 "error"
             );
 
-        } else if (event.error === "no-speech") {
+        } else if (
+            event.error === "no-speech"
+        ) {
 
             showToast(
-                "لم يتم اكتشاف أي كلام",
+                "⚠️ لم يتم اكتشاف أي كلام",
                 "warning"
+            );
+
+        } else if (
+            event.error === "audio-capture"
+        ) {
+
+            showToast(
+                "❌ تعذر الوصول إلى ميكروفون الهاتف",
+                "error"
+            );
+
+        } else if (
+            event.error === "language-not-supported"
+        ) {
+
+            showToast(
+                "❌ المتصفح لا يدعم التعرف على هذه اللغة",
+                "error"
+            );
+
+            console.error(
+                "اللغة:",
+                getSpeechLanguage()
             );
 
         } else {
 
             showToast(
-                "حدث خطأ في الميكروفون: " +
+                "❌ خطأ في التعرف الصوتي: " +
                 event.error,
                 "error"
             );
-
         }
-
     };
 
+
+    // ----------------------------------------------
+    // انتهاء التسجيل
+    // ----------------------------------------------
 
     rec.onend = function() {
 
         isListening = false;
 
         updateMicrophoneUI(false);
-
     };
 
 
     return rec;
-
 }
 
 
@@ -913,136 +952,7 @@ recognition =
 
 
 // ======================================================
-// العثور على زر الميكروفون
-// ======================================================
-
-function findMicrophoneButton() {
-
-    const possibleIds = [
-
-        "micBtn",
-        "microphoneBtn",
-        "micButton",
-        "voiceBtn",
-        "recordBtn",
-        "startMicBtn",
-        "speechBtn"
-
-    ];
-
-
-    for (const id of possibleIds) {
-
-        const button =
-            document.getElementById(id);
-
-
-        if (button) {
-            return button;
-        }
-
-    }
-
-
-    return null;
-
-}
-
-
-const microphoneBtn =
-    findMicrophoneButton();
-
-
-// ======================================================
-// إنشاء زر الميكروفون إذا لم يكن موجودًا
-// ======================================================
-
-let micButton = microphoneBtn;
-
-
-if (!micButton && sourceText) {
-
-    micButton =
-        document.createElement("button");
-
-
-    micButton.id =
-        "micBtn";
-
-
-    micButton.type =
-        "button";
-
-
-    micButton.textContent =
-        "🎤";
-
-
-    micButton.title =
-        "التحدث بالميكروفون";
-
-
-    micButton.setAttribute(
-        "aria-label",
-        "التحدث بالميكروفون"
-    );
-
-
-    // وضع الزر بعد مربع النص
-    sourceText.parentElement.appendChild(
-        micButton
-    );
-
-}
-
-
-// ======================================================
-// تحديث شكل زر الميكروفون
-// ======================================================
-
-function updateMicrophoneUI(active) {
-
-    if (!micButton) {
-        return;
-    }
-
-
-    if (active) {
-
-        micButton.textContent =
-            "⏹️";
-
-
-        micButton.title =
-            "إيقاف التسجيل";
-
-
-        micButton.classList.add(
-            "recording"
-        );
-
-    } else {
-
-        micButton.textContent =
-            "🎤";
-
-
-        micButton.title =
-            "التحدث بالميكروفون";
-
-
-        micButton.classList.remove(
-            "recording"
-        );
-
-    }
-
-}
-
-
-
-// ======================================================
-// تشغيل / إيقاف الميكروفون مع طلب الإذن
+// MIC - زر الميكروفون
 // ======================================================
 
 if (micButton) {
@@ -1051,7 +961,10 @@ if (micButton) {
         "click",
         async function() {
 
-            // إذا كان التسجيل يعمل → إيقافه
+            // ------------------------------------------
+            // إيقاف التسجيل
+            // ------------------------------------------
+
             if (isListening) {
 
                 if (recognition) {
@@ -1062,11 +975,14 @@ if (micButton) {
             }
 
 
-            // التحقق من دعم المتصفح
+            // ------------------------------------------
+            // التحقق من SpeechRecognition
+            // ------------------------------------------
+
             if (!recognition) {
 
                 showToast(
-                    "المتصفح لا يدعم التعرف على الكلام",
+                    "❌ المتصفح لا يدعم التعرف على الكلام",
                     "error"
                 );
 
@@ -1074,51 +990,65 @@ if (micButton) {
             }
 
 
+            // ------------------------------------------
+            // طلب إذن الميكروفون
+            // ------------------------------------------
+
             try {
 
-                // ==========================================
-                // طلب إذن استخدام الميكروفون
-                // ==========================================
+                if (!navigator.mediaDevices ||
+                    !navigator.mediaDevices.getUserMedia
+                ) {
 
-                if (navigator.mediaDevices &&
-                    navigator.mediaDevices.getUserMedia) {
+                    showToast(
+                        "❌ الوصول إلى الميكروفون غير متاح",
+                        "error"
+                    );
 
-                    const stream =
-                        await navigator.mediaDevices.getUserMedia({
-                            audio: true
-                        });
-
-                    // حصلنا على الإذن، لا نحتاج إلى إبقاء
-                    // الميكروفون مفتوحًا هنا
-                    stream.getTracks().forEach(function(track) {
-                        track.stop();
-                    });
-
+                    return;
                 }
 
 
-                // ==========================================
-                // تحديد لغة الكلام
-                // ==========================================
+                const stream =
+                    await navigator.mediaDevices.getUserMedia({
+                        audio: true
+                    });
+
+
+                // لا نحتاج إلى إبقاء الميكروفون مفتوحًا
+                stream.getTracks().forEach(
+                    function(track) {
+                        track.stop();
+                    }
+                );
+
+
+                // --------------------------------------
+                // تحديد اللغة
+                // --------------------------------------
 
                 recognition.lang =
                     getSpeechLanguage();
 
 
-                // ==========================================
-                // تشغيل التعرف على الكلام
-                // ==========================================
+                console.log(
+                    "🎤 Speech language:",
+                    recognition.lang
+                );
+
+
+                // --------------------------------------
+                // بدء التعرف
+                // --------------------------------------
 
                 recognition.start();
-
 
             } catch (error) {
 
                 console.error(
-                    "Microphone permission/start error:",
+                    "Microphone Error:",
                     error
                 );
-
 
                 if (
                     error.name === "NotAllowedError" ||
@@ -1126,7 +1056,7 @@ if (micButton) {
                 ) {
 
                     showToast(
-                        "❌ يجب السماح للموقع باستخدام الميكروفون",
+                        "❌ اسمح للموقع باستخدام الميكروفون",
                         "error"
                     );
 
@@ -1135,47 +1065,32 @@ if (micButton) {
                 ) {
 
                     showToast(
-                        "🎤 لم يتم العثور على ميكروفون",
+                        "❌ لم يتم العثور على ميكروفون",
                         "error"
                     );
 
                 } else {
 
                     showToast(
-                        "تعذر تشغيل الميكروفون",
+                        "❌ تعذر تشغيل الميكروفون: " +
+                        error.name,
                         "error"
                     );
-
                 }
-
             }
-
         }
     );
-
 }
-
-navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => {
-        alert("✅ الميكروفون يعمل");
-        stream.getTracks().forEach(track => track.stop());
-    })
-    .catch(error => {
-        alert("❌ " + error.name + "\n" + error.message);
-        console.error(error);
-    });
-
 
 
 // ======================================================
-// النطق الصوتي
+// SPEAKER - النطق الصوتي
 // ======================================================
 
 function speakTranslation() {
 
     const text =
         targetText.value.trim();
-
 
     if (!text) {
 
@@ -1185,9 +1100,7 @@ function speakTranslation() {
         );
 
         return;
-
     }
-
 
     if (!("speechSynthesis" in window)) {
 
@@ -1197,20 +1110,15 @@ function speakTranslation() {
         );
 
         return;
-
     }
 
-
     window.speechSynthesis.cancel();
-
 
     const utterance =
         new SpeechSynthesisUtterance(text);
 
-
     const targetLang =
         targetLangEl.value;
-
 
     if (
         targetLang === "ar" ||
@@ -1226,16 +1134,11 @@ function speakTranslation() {
 
         utterance.lang =
             "wo-SN";
-
     }
 
-
     utterance.rate = 0.9;
-
     utterance.pitch = 1;
-
     utterance.volume = 1;
-
 
     utterance.onerror = function() {
 
@@ -1243,50 +1146,39 @@ function speakTranslation() {
             "تعذر تشغيل النطق الصوتي",
             "error"
         );
-
     };
-
 
     window.speechSynthesis.speak(
         utterance
     );
-
 }
 
 
 // ======================================================
-// العثور على زر النطق
+// SPEAKER - البحث عن زر النطق
 // ======================================================
 
 function findSpeakButton() {
 
     const ids = [
-
         "speakBtn",
-        "speechBtn",
         "voiceOutputBtn",
         "readBtn",
         "listenBtn",
         "pronounceBtn"
-
     ];
-
 
     for (const id of ids) {
 
         const button =
             document.getElementById(id);
 
-
         if (button) {
             return button;
         }
-
     }
 
-
     return null;
-
 }
 
 
@@ -1295,7 +1187,7 @@ let speakBtn =
 
 
 // ======================================================
-// إنشاء زر النطق إذا لم يكن موجودًا
+// SPEAKER - إنشاء الزر إذا لم يكن موجودًا
 // ======================================================
 
 if (!speakBtn && targetText) {
@@ -1303,33 +1195,26 @@ if (!speakBtn && targetText) {
     speakBtn =
         document.createElement("button");
 
-
     speakBtn.id =
         "speakBtn";
-
 
     speakBtn.type =
         "button";
 
-
     speakBtn.textContent =
         "🔊";
 
-
     speakBtn.title =
         "نطق الترجمة";
-
 
     speakBtn.setAttribute(
         "aria-label",
         "نطق الترجمة"
     );
 
-
     targetText.parentElement.appendChild(
         speakBtn
     );
-
 }
 
 
@@ -1339,12 +1224,11 @@ if (speakBtn) {
         "click",
         speakTranslation
     );
-
 }
 
 
 // ======================================================
-// LocalStorage - الحصول على السجل
+// HISTORY - الحصول على السجل
 // ======================================================
 
 function getHistory() {
@@ -1356,20 +1240,16 @@ function getHistory() {
                 STORAGE_KEY
             );
 
-
         if (!data) {
             return [];
         }
 
-
         const parsed =
             JSON.parse(data);
-
 
         if (!Array.isArray(parsed)) {
             return [];
         }
-
 
         return parsed;
 
@@ -1381,14 +1261,12 @@ function getHistory() {
         );
 
         return [];
-
     }
-
 }
 
 
 // ======================================================
-// حفظ ترجمة في السجل
+// HISTORY - حفظ الترجمة
 // ======================================================
 
 function saveToHistory(
@@ -1401,24 +1279,18 @@ function saveToHistory(
     let history =
         getHistory();
 
-
     const entry = {
 
         source: source,
-
         target: target,
 
         srcLang: srcLang,
-
         tgtLang: tgtLang,
 
         timestamp: Date.now()
-
     };
 
-
     history.unshift(entry);
-
 
     if (
         history.length >
@@ -1430,9 +1302,7 @@ function saveToHistory(
                 0,
                 MAX_HISTORY
             );
-
     }
-
 
     try {
 
@@ -1447,14 +1317,12 @@ function saveToHistory(
             "LocalStorage error:",
             error
         );
-
     }
-
 }
 
 
 // ======================================================
-// مسح السجل
+// HISTORY - مسح السجل
 // ======================================================
 
 function clearHistory() {
@@ -1471,18 +1339,14 @@ function clearHistory() {
             "Clear history error:",
             error
         );
-
     }
 
-
     renderHistory();
-
 
     showToast(
         "تم مسح السجل",
         "success"
     );
-
 }
 
 
@@ -1499,17 +1363,14 @@ if (clearHistoryBtn) {
             ) {
 
                 clearHistory();
-
             }
-
         }
     );
-
 }
 
 
 // ======================================================
-// عرض السجل
+// HISTORY - عرض السجل
 // ======================================================
 
 function renderHistory() {
@@ -1518,13 +1379,10 @@ function renderHistory() {
         return;
     }
 
-
     const history =
         getHistory();
 
-
     historyList.innerHTML = "";
-
 
     if (history.length === 0) {
 
@@ -1534,100 +1392,88 @@ function renderHistory() {
             "</p>";
 
         return;
-
     }
 
+    history.forEach(
+        function(item) {
 
-    history.forEach(function(item) {
+            const div =
+                document.createElement("div");
 
-        const div =
-            document.createElement("div");
+            div.className =
+                "history-item";
 
-
-        div.className =
-            "history-item";
-
-
-        const source =
-            escapeHtml(
-                String(item.source || "")
-            );
-
-
-        const target =
-            escapeHtml(
-                String(item.target || "")
-            );
-
-
-        const srcLabel =
-            escapeHtml(
-                getLangLabel(
-                    item.srcLang
-                )
-            );
-
-
-        const tgtLabel =
-            escapeHtml(
-                getLangLabel(
-                    item.tgtLang
-                )
-            );
-
-
-        div.innerHTML =
-            '<div class="h-source">' +
-            source +
-            "</div>" +
-
-            '<div class="h-target">' +
-            target +
-            "</div>" +
-
-            '<div class="h-lang">' +
-            srcLabel +
-            " → " +
-            tgtLabel +
-            "</div>";
-
-
-        div.addEventListener(
-            "click",
-            function() {
-
-                sourceText.value =
-                    item.source || "";
-
-
-                targetText.value =
-                    item.target || "";
-
-
-                sourceLangEl.value =
-                    item.srcLang;
-
-
-                targetLangEl.value =
-                    item.tgtLang;
-
-
-                updateCharCount();
-
-
-                showToast(
-                    "تم تحميل الترجمة السابقة",
-                    "success"
+            const source =
+                escapeHtml(
+                    String(
+                        item.source || ""
+                    )
                 );
 
-            }
-        );
+            const target =
+                escapeHtml(
+                    String(
+                        item.target || ""
+                    )
+                );
 
+            const srcLabel =
+                escapeHtml(
+                    getLangLabel(
+                        item.srcLang
+                    )
+                );
 
-        historyList.appendChild(div);
+            const tgtLabel =
+                escapeHtml(
+                    getLangLabel(
+                        item.tgtLang
+                    )
+                );
 
-    });
+            div.innerHTML =
+                '<div class="h-source">' +
+                source +
+                "</div>" +
 
+                '<div class="h-target">' +
+                target +
+                "</div>" +
+
+                '<div class="h-lang">' +
+                srcLabel +
+                " → " +
+                tgtLabel +
+                "</div>";
+
+            div.addEventListener(
+                "click",
+                function() {
+
+                    sourceText.value =
+                        item.source || "";
+
+                    targetText.value =
+                        item.target || "";
+
+                    sourceLangEl.value =
+                        item.srcLang;
+
+                    targetLangEl.value =
+                        item.tgtLang;
+
+                    updateCharCount();
+
+                    showToast(
+                        "تم تحميل الترجمة السابقة",
+                        "success"
+                    );
+                }
+            );
+
+            historyList.appendChild(div);
+        }
+    );
 }
 
 
@@ -1640,27 +1486,23 @@ function escapeHtml(text) {
     const div =
         document.createElement("div");
 
-
     div.textContent =
         text;
 
-
     return div.innerHTML;
-
 }
 
 
 // ======================================================
-// تهيئة السجل
+// تهيئة التطبيق
 // ======================================================
 
 renderHistory();
-
 updateCharCount();
 
 
 // ======================================================
-// حالة الاتصال
+// حالة الاتصال بالإنترنت
 // ======================================================
 
 window.addEventListener(
@@ -1671,7 +1513,6 @@ window.addEventListener(
             "تم استعادة الاتصال بالإنترنت",
             "success"
         );
-
     }
 );
 
@@ -1684,7 +1525,6 @@ window.addEventListener(
             "انقطع الاتصال بالإنترنت، يرجى التحقق من شبكتك",
             "error"
         );
-
     }
 );
 
@@ -1707,31 +1547,51 @@ if (sourceText) {
                 e.preventDefault();
 
                 performTranslation();
-
             }
-
         }
     );
-
 }
 
 
 // ======================================================
-// جاهز
+// معلومات تشخيصية
 // ======================================================
+
+console.log(
+    "========================================"
+);
 
 console.log(
     "✅ مترجم Wolof ↔ العربية جاهز"
 );
 
 console.log(
-    "🎤 نظام الميكروفون:",
-    recognition ? "متاح" : "غير مدعوم"
+    "🎤 SpeechRecognition:",
+    recognition ?
+    "متاح" :
+    "غير مدعوم"
 );
 
 console.log(
-    "🔊 النطق الصوتي:",
+    "🎤 getUserMedia:",
+    navigator.mediaDevices &&
+    navigator.mediaDevices.getUserMedia ?
+    "متاح" :
+    "غير متاح"
+);
+
+console.log(
+    "🔊 speechSynthesis:",
     "speechSynthesis" in window ?
     "متاح" :
     "غير مدعوم"
+);
+
+console.log(
+    "🔒 Secure Context:",
+    window.isSecureContext
+);
+
+console.log(
+    "========================================"
 );
