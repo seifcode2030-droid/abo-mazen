@@ -39,10 +39,25 @@
                 </div>
 
                 <div class="text-area-wrapper">
+
                     <div class="input-area">
-                        <textarea id="sourceText" placeholder="أدخل النص هنا..." maxlength="500"></textarea>
-                        <div class="char-counter"><span id="charCount">0</span> / 500</div>
+
+                        <div class="source-input-container">
+
+                            <textarea id="sourceText" placeholder="أدخل النص هنا..." maxlength="500"></textarea>
+
+                            <button id="micBtn" class="mic-btn" type="button" title="التحدث بالميكروفون" aria-label="التحدث بالميكروفون">
+            🎤
+        </button>
+
+                        </div>
+
+                        <div class="char-counter">
+                            <span id="charCount">0</span> / 500
+                        </div>
+
                     </div>
+
                     <div class="output-area">
                         <textarea id="targetText" placeholder="الترجمة ستظهر هنا..." readonly></textarea>
                         <div class="output-actions">
