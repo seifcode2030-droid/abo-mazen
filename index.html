@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>مترجم Wolof ↔ العربية</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <h1>مترجم Wolof ↔ العربية</h1>
+            <p class="subtitle">بتقنية NLLB من Hugging Face</p>
+        </header>
+
+        <main>
+            <!-- منطقة الترجمة -->
+            <section class="translator-card">
+                <div class="language-selector">
+                    <div class="select-group">
+                        <label for="sourceLang">لغة المصدر</label>
+                        <select id="sourceLang">
+                            <option value="wol_Latn">Wolof</option>
+                            <option value="arb_Arab">العربية</option>
+                        </select>
+                    </div>
+                    <button id="swapLangBtn" class="swap-btn" aria-label="تبديل اللغات">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+                    </button>
+                    <div class="select-group">
+                        <label for="targetLang">لغة الهدف</label>
+                        <select id="targetLang">
+                            <option value="arb_Arab">العربية</option>
+                            <option value="wol_Latn">Wolof</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-area-wrapper">
+                    <div class="input-area">
+                        <textarea id="sourceText" placeholder="أدخل النص هنا..." maxlength="500"></textarea>
+                        <div class="char-counter"><span id="charCount">0</span> / 500</div>
+                    </div>
+                    <div class="output-area">
+                        <textarea id="targetText" placeholder="الترجمة ستظهر هنا..." readonly></textarea>
+                        <div class="output-actions">
+                            <button id="copyBtn" class="icon-btn" title="نسخ الترجمة">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            </button>
+                            <button id="clearBtn" class="icon-btn" title="مسح النص">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-bar">
+                    <button id="translateBtn" class="primary-btn">
+                        <span id="translateText">ترجمة</span>
+                        <span id="loadingIndicator" class="loading-spinner hidden"></span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- سجل الترجمة -->
+            <section class="history-card">
+                <div class="history-header">
+                    <h2>سجل الترجمة</h2>
+                    <button id="clearHistoryBtn" class="danger-btn">مسح السجل</button>
+                </div>
+                <div id="historyList" class="history-list">
+                    <p class="empty-history">لا توجد ترجمات محفوظة.</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>جميع الحقوق محفوظة &copy; 2026</p>
+        </footer>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
