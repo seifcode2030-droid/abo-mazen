@@ -1155,6 +1155,16 @@ if (micButton) {
 
 }
 
+navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+        alert("✅ الميكروفون يعمل");
+        stream.getTracks().forEach(track => track.stop());
+    })
+    .catch(error => {
+        alert("❌ " + error.name + "\n" + error.message);
+        console.error(error);
+    });
+
 
 
 // ======================================================
