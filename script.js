@@ -1040,16 +1040,29 @@ function updateMicrophoneUI(active) {
 }
 
 
+
 // ======================================================
-// تشغيل / إيقاف الميكروفون
+// تشغيل / إيقاف الميكروفون مع طلب الإذن
 // ======================================================
 
 if (micButton) {
 
     micButton.addEventListener(
         "click",
-        function() {
+        async function() {
 
+            // إذا كان التسجيل يعمل → إيقافه
+            if (isListening) {
+
+                if (recognition) {
+                    recognition.stop();
+                }
+
+                return;
+            }
+
+
+            // التحقق من دعم المتصفح
             if (!recognition) {
 
                 showToast(
@@ -1058,38 +1071,82 @@ if (micButton) {
                 );
 
                 return;
-
-            }
-
-
-            if (isListening) {
-
-                recognition.stop();
-
-                return;
-
             }
 
 
             try {
 
+                // ==========================================
+                // طلب إذن استخدام الميكروفون
+                // ==========================================
+
+                if (navigator.mediaDevices &&
+                    navigator.mediaDevices.getUserMedia) {
+
+                    const stream =
+                        await navigator.mediaDevices.getUserMedia({
+                            audio: true
+                        });
+
+                    // حصلنا على الإذن، لا نحتاج إلى إبقاء
+                    // الميكروفون مفتوحًا هنا
+                    stream.getTracks().forEach(function(track) {
+                        track.stop();
+                    });
+
+                }
+
+
+                // ==========================================
+                // تحديد لغة الكلام
+                // ==========================================
+
                 recognition.lang =
                     getSpeechLanguage();
 
 
+                // ==========================================
+                // تشغيل التعرف على الكلام
+                // ==========================================
+
                 recognition.start();
+
 
             } catch (error) {
 
                 console.error(
-                    "Microphone start error:",
+                    "Microphone permission/start error:",
                     error
                 );
 
-                showToast(
-                    "تعذر تشغيل الميكروفون",
-                    "error"
-                );
+
+                if (
+                    error.name === "NotAllowedError" ||
+                    error.name === "PermissionDeniedError"
+                ) {
+
+                    showToast(
+                        "❌ يجب السماح للموقع باستخدام الميكروفون",
+                        "error"
+                    );
+
+                } else if (
+                    error.name === "NotFoundError"
+                ) {
+
+                    showToast(
+                        "🎤 لم يتم العثور على ميكروفون",
+                        "error"
+                    );
+
+                } else {
+
+                    showToast(
+                        "تعذر تشغيل الميكروفون",
+                        "error"
+                    );
+
+                }
 
             }
 
@@ -1097,6 +1154,7 @@ if (micButton) {
     );
 
 }
+
 
 
 // ======================================================
